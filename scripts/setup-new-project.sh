@@ -51,7 +51,8 @@ echo ""
 echo -e "📌 Project Name:    ${GREEN}$PROJECT_NAME${NC}"
 echo -e "📦 Module Name:     ${GREEN}$MODULE_NAME${NC}"
 echo -e "🏢 Organization:    ${GREEN}$ORG_NAME${NC}"
-echo -e "🔧 Edition:         ${GREEN}${EDITION^}${NC}"
+EDITION_DISPLAY=$(echo "$EDITION" | cut -c1 | tr '[:lower:]' '[:upper:]')$(echo "$EDITION" | cut -c2-)  # Capitalize first letter
+echo -e "🔧 Edition:         ${GREEN}$EDITION_DISPLAY${NC}"
 echo ""
 
 # 1. Rename custom module
@@ -66,8 +67,8 @@ echo -e "${YELLOW}2️⃣ Updating module manifest...${NC}"
 MODULE_MANIFEST="addons/custom/$MODULE_NAME/__manifest__.py"
 if [ -f "$MODULE_MANIFEST" ]; then
   TITLE_NAME=$(echo "$MODULE_NAME" | tr '_' ' ' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1))substr($i,2)} 1')
-  sed -i '' "s/'name': 'MTA Base'/'name': '$TITLE_NAME'/g" "$MODULE_MANIFEST"
-  sed -i '' "s/'description': 'Base module for MTA project'/'description': 'Base module for $PROJECT_NAME project'/g" "$MODULE_MANIFEST"
+  sed -i '' "s|'name': 'MTA Base'|'name': '$TITLE_NAME'|g" "$MODULE_MANIFEST"
+  sed -i '' "s|'description': 'Base module for MTA project'|'description': 'Base module for $PROJECT_NAME project'|g" "$MODULE_MANIFEST"
   echo -e "   ${GREEN}✅ Updated manifest${NC}"
 fi
 
@@ -95,10 +96,11 @@ fi
 
 # 4. Update docker-compose files
 echo -e "${YELLOW}4️⃣ Updating docker-compose files...${NC}"
+PROJECT_NAME_UNDERSCORE=$(echo "$PROJECT_NAME" | tr '-' '_')
 for file in docker-compose.yml docker-compose.dev.yml docker-compose.prod.yml; do
   if [ -f "$file" ]; then
-    sed -i '' "s/odoo-mta/$PROJECT_NAME/g" "$file"
-    sed -i '' "s/odoo_mta/$(echo $PROJECT_NAME | tr '-' '_')/g" "$file"
+    sed -i '' "s|odoo-mta|$PROJECT_NAME|g" "$file"
+    sed -i '' "s|odoo_mta|$PROJECT_NAME_UNDERSCORE|g" "$file"
     echo -e "   ${GREEN}✅ Updated $file${NC}"
   fi
 done
@@ -136,8 +138,8 @@ fi
 # 6. Update README
 echo -e "${YELLOW}6️⃣ Updating README.md...${NC}"
 if [ -f "README.md" ]; then
-  sed -i '' "s/odoo-template/$PROJECT_NAME/g" README.md
-  sed -i '' "s/resultrum/$ORG_NAME/g" README.md
+  sed -i '' "s|odoo-template|$PROJECT_NAME|g" README.md
+  sed -i '' "s|resultrum|$ORG_NAME|g" README.md
   echo -e "   ${GREEN}✅ Updated README.md${NC}"
 fi
 
@@ -146,8 +148,8 @@ echo -e "${YELLOW}6️⃣b Updating scripts...${NC}"
 if [ -d "scripts" ]; then
   for file in scripts/*.sh; do
     if [ -f "$file" ]; then
-      sed -i '' "s/odoo-mta/$PROJECT_NAME/g" "$file"
-      sed -i '' "s/odoo_mta/$(echo $PROJECT_NAME | tr '-' '_')/g" "$file"
+      sed -i '' "s|odoo-mta|$PROJECT_NAME|g" "$file"
+      sed -i '' "s|odoo_mta|$PROJECT_NAME_UNDERSCORE|g" "$file"
     fi
   done
   echo -e "   ${GREEN}✅ Updated scripts${NC}"
@@ -158,8 +160,8 @@ echo -e "${YELLOW}6️⃣c Updating infrastructure templates...${NC}"
 if [ -d "infrastructure" ]; then
   for file in infrastructure/*.bicep infrastructure/*.json; do
     if [ -f "$file" ]; then
-      sed -i '' "s/odoo-mta/$PROJECT_NAME/g" "$file"
-      sed -i '' "s/odoo_mta/$(echo $PROJECT_NAME | tr '-' '_')/g" "$file"
+      sed -i '' "s|odoo-mta|$PROJECT_NAME|g" "$file"
+      sed -i '' "s|odoo_mta|$PROJECT_NAME_UNDERSCORE|g" "$file"
     fi
   done
   echo -e "   ${GREEN}✅ Updated infrastructure${NC}"
