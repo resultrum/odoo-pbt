@@ -33,8 +33,10 @@ if [ ! -f ".env" ]; then
   exit 1
 fi
 
-# Source .env
-export $(grep -v '^#' .env | xargs)
+# Source .env safely (handles spaces and special characters)
+set -a
+source .env
+set +a
 
 # Verify required variables
 if [ -z "$ODOO_REPO_URL" ] || [ -z "$ODOO_REPO_BRANCH" ]; then
