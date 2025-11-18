@@ -1,15 +1,15 @@
-# CI/CD Pipeline Guide for odoo-mta
+# CI/CD Pipeline Guide for Odoo Template
 
-Complete documentation for the GitHub Actions CI/CD pipeline.
+Complete documentation for the GitHub Actions CI/CD pipeline included with this template.
 
 ---
 
 ## 📋 Table of Contents
 
 1. [Overview](#overview)
-2. [Architecture](#architecture)
+2. [What Gets Tested](#what-gets-tested)
 3. [Workflows](#workflows)
-4. [Setup & Configuration](#setup--configuration)
+4. [Configuration](#configuration)
 5. [Usage](#usage)
 6. [Troubleshooting](#troubleshooting)
 
@@ -17,62 +17,48 @@ Complete documentation for the GitHub Actions CI/CD pipeline.
 
 ## Overview
 
-The odoo-mta CI/CD pipeline automates:
-
-- **Testing**: Runs linting, tests, and coverage checks on every push/PR
-- **Building**: Creates Docker images tagged for UAT
-- **Deploying**: Auto-deploys to UAT, manual deploys to PROD and Odoo.sh
-- **Monitoring**: Health checks with automatic rollback capability
+The Odoo Template includes a complete, production-ready CI/CD pipeline that automatically tests, validates, and builds your code on every push and pull request.
 
 ### Key Features
 
-✅ **80% Test Coverage Gate** - PRs blocked if coverage < 80% or regresses
-✅ **Separate Storage** - odoo-mta:uat-* for UAT, odoo-mta:prod-* for PROD
-✅ **Multi-target** - Deploy to VM (Docker), Odoo.sh (native), or Local dev
-✅ **Automated Rollback** - UAT auto-rolls back on health check failure
-✅ **Database Safety** - Backups created before every deployment
-✅ **Anonymization** - PROD→UAT data copy with GDPR compliance
+✅ **Code Quality Checks** - Black, isort, flake8 formatting and linting
+✅ **Security Scanning** - Hardcoded secrets detection, .gitignore validation
+✅ **Docker Build Verification** - Ensures your image builds correctly
+✅ **Module Detection** - Automatically finds and reports custom modules
+✅ **Odoo Module Testing** - Tests your custom modules with Docker + PostgreSQL
+✅ **Coverage Reporting** - Code coverage metrics (integrated with Codecov)
 
 ---
 
-## Architecture
+## What Gets Tested
 
-### Pipeline Flow
+### 1. Code Quality (5 parallel jobs in CI)
 
-```
-Developer pushes code
-    ↓
-[CI] Test & Lint → Coverage check (80% gate)
-    ↓ (pass)
-Merge to main
-    ↓
-[Build] Docker image → Push to odoo-mta:uat-*
-    ↓
-[Deploy-UAT] Auto-deploy to UAT VM
-    ↓ (health check success)
-UAT ready for testing
-    ↓
-[Deploy-PROD] Manual trigger (approval)
-    ↓
-Push prod-* image to Docker Hub
-Deploy to PROD VM with backups
-    ↓ (health check)
-PROD ready
-```
+The `ci.yml` workflow runs automatically on every push and pull request:
 
-### Image Storage Strategy
+**Job 1: lint-and-test**
+- Black formatting check
+- isort import sorting
+- flake8 PEP8 linting
+- pytest on project structure tests
+- Coverage reporting
 
-```
-Docker Hub
-├── odoo-mta:uat-latest         (latest working UAT version)
-├── odoo-mta:uat-v0.1.0         (specific UAT versions)
-├── odoo-mta:uat-abc123def      (commit-based UAT tags)
-│
-└── odoo-mta:prod-v0.1.0        (PROD versions - created on PROD deploy)
-    odoo-mta:prod-v0.0.9
-    odoo-mta:prod-v0.0.8
-    (keep last 5 versions)
-```
+**Job 2: security-check**
+- Detects hardcoded secrets
+- Validates .gitignore configuration
+
+**Job 3: build-check**
+- Tests Docker image builds successfully
+
+**Job 4: module-scan**
+- Detects all custom modules in `/addons/custom/`
+- Reports module count and names
+
+**Job 5: odoo-module-test**
+- Sets up PostgreSQL 15 service
+- Builds Docker image
+- Installs custom modules
+- Runs module tests with `--test-enable`
 
 ---
 
@@ -80,487 +66,334 @@ Docker Hub
 
 ### 1. CI Workflow (`ci.yml`)
 
-**Triggers**: Every push, every pull request
+**Triggers**:
+- Every push to: `main`, `develop`, `master-iteration*` branches
+- Every pull request to: `main`, `develop`, `master-iteration*` branches
 
-**Steps**:
-1. Checkout code
-2. Setup Python environment
-3. Run black formatting check
-4. Run isort import check
-5. Run flake8 linting
-6. Validate module manifests
-7. Run pytest with coverage
-8. Check for hardcoded secrets
-9. Verify .gitignore configuration
-10. Build Docker image (test build)
-11. Scan for Odoo modules
+**What it does**:
+1. Checks out code
+2. Sets up Python 3.10+ environment
+3. Validates code formatting (black, isort, flake8)
+4. Runs pytest on structure tests
+5. Scans for hardcoded secrets
+6. Validates .gitignore
+7. Tests Docker image build
+8. Scans for Odoo modules
+9. Tests modules with Docker + PostgreSQL
 
 **Success Criteria**:
-- ✅ All linting passes
-- ✅ Tests pass
-- ✅ Coverage ≥ 80%
-- ✅ No coverage regression
+- ✅ All formatting checks pass
+- ✅ All tests pass
 - ✅ No hardcoded secrets found
+- ✅ Docker image builds successfully
+- ✅ Custom modules detected and tested
 
 **Failure Actions**:
 - ❌ PR cannot be merged if CI fails
-- ❌ Blocks on low coverage or regression
-- ❌ Requires developer fixes
+- ❌ Email notification sent to committer
+- ❌ Requires developer to fix and push again
 
-### 2. Build UAT Workflow (`build-uat.yml`)
-
-**Triggers**: Merge to main
-
-**Steps**:
-1. Checkout code
-2. Generate image metadata (version, commit, build date)
-3. Login to Docker Hub
-4. Build Docker image
-5. Push with tags:
-   - `resultrum/odoo-mta:uat-latest`
-   - `resultrum/odoo-mta:uat-v0.1.0` (version)
-   - `resultrum/odoo-mta:uat-abc123` (commit)
-6. Create GitHub Release (optional)
-
-**Outputs**:
-- Docker image on Docker Hub
-- Ready for UAT deployment
-
-### 3. Deploy UAT Workflow (`deploy-uat.yml`)
+### 2. Docker Build & Push Workflow (`docker-build-push.yml`)
 
 **Triggers**:
-- Automatically after build-uat completes
-- Manual trigger with image tag selection
+- Merge to `main` branch
+- Push to `master-iteration*` branches
+- Git tags starting with `v*` (e.g., `v1.0.0`)
 
-**Steps**:
-1. Verify image exists on Docker Hub
-2. SSH to UAT VM
-3. Backup current database (timestamped)
-4. Pull new image
-5. Stop old containers
-6. Run migrations
-7. Start new containers
-8. Health check (http://uat-host:8069)
-9. On failure: Auto-rollback
+**What it does**:
+1. Builds Docker image
+2. Tags image based on branch/tag
+3. Pushes to GitHub Container Registry (GHCR)
 
-**Rollback**:
-- Stops new containers
-- Restores database from backup
-- Starts previous version
-- Alerts team
+**Image Tagging Strategy**:
 
-### 4. Deploy PROD Workflow (`deploy-prod.yml`)
-
-**Triggers**: Manual only
-
-**Prerequisites**:
 ```
-Inputs required:
-- Select image version (v0.1.0, v0.0.9, etc.)
-- Confirmation: "I understand this deploys to PRODUCTION"
-- (Optional) Backup path
+Scenario 1: Push to main
+├── Image: ghcr.io/<organization>/<project>:latest
+└── Use case: Production releases
+
+Scenario 2: Push to master-iteration1.0
+├── Image: ghcr.io/<organization>/<project>:master-iteration1.0
+└── Use case: Staging environment
+
+Scenario 3: Tag v1.0.0 on main
+├── Images:
+│   ├── ghcr.io/<organization>/<project>:v1.0.0
+│   └── ghcr.io/<organization>/<project>:latest
+└── Use case: Semantic versioning for production
 ```
 
-**Steps**:
-1. Validate confirmation phrase
-2. Verify image exists
-3. SSH to PROD VM
-4. Create comprehensive backups:
-   - Database dump (compressed)
-   - Application filestore
-   - Docker image backup
-   - Backup manifest (JSON)
-5. Pull new image
-6. Stop old containers
-7. Run migrations
-8. Start new containers
-9. Health check
-10. If fails: Manual rollback required
-
-### 5. Deploy Odoo.sh Workflow (`deploy-odoo-sh.yml`)
-
-**Triggers**: Manual only
-
-**Prerequisites**:
-```
-Secrets required:
-- ODOO_SH_SSH_KEY: SSH key for git.odoo.sh
-- ODOO_SH_REPO: Repository path (e.g., customer/database)
-- ODOO_SH_HOST: Odoo.sh instance hostname
-
-Inputs:
-- Branch to deploy (default: main)
-- Confirmation phrase
-```
-
-**Process**:
-1. Validate confirmation
-2. Setup SSH for Odoo.sh
-3. Push code to git.odoo.sh
-4. Odoo.sh automatically:
-   - Pulls code
-   - Installs dependencies
-   - Runs migrations
-   - Restarts service
-
-### 6. Refresh UAT from PROD Workflow (`refresh-uat-from-prod.yml`)
-
-**Triggers**: Manual only
-
-**Prerequisites**:
-```
-Inputs:
-- Confirmation: "Refresh UAT database from PROD"
-- Anonymize data: yes/no (default: yes)
-```
-
-**Process**:
-1. Create UAT database backup
-2. SSH to PROD VM, dump database
-3. Copy dump to UAT VM
-4. Restore into UAT database
-5. (Optional) Run anonymization script
-6. Verify data integrity
-7. Restart UAT containers
+**Authentication**: Uses `GITHUB_TOKEN` (no secrets to configure!)
 
 ---
 
-## Setup & Configuration
+## Configuration
 
-### 1. GitHub Secrets Required
+### GitHub Secrets
 
-Add these secrets to your GitHub repository settings:
+The template uses `GITHUB_TOKEN` which is provided automatically by GitHub. **No manual secrets configuration needed for basic CI/CD!**
 
-**Docker Hub**:
+However, if you extend the workflows for custom deployments, you may want to add:
+
 ```
-DOCKER_HUB_USERNAME = resultrum
-DOCKER_HUB_TOKEN = <token from Docker Hub>
-```
-
-**UAT Environment**:
-```
-UAT_VM_HOST = 192.168.1.100 (or hostname)
-UAT_VM_USER = ubuntu
-UAT_VM_SSH_KEY = <SSH private key>
+# For deploying to your server
+DEPLOY_SSH_KEY = <SSH private key>
+DEPLOY_HOST = <your.server.com>
+DEPLOY_USER = <username>
 ```
 
-**PROD Environment**:
-```
-PROD_VM_HOST = 192.168.1.200
-PROD_VM_USER = ubuntu
-PROD_VM_SSH_KEY = <SSH private key>
-```
+### Local Testing with `act`
 
-**Odoo.sh (optional)**:
-```
-ODOO_SH_HOST = customer.odoo.sh
-ODOO_SH_REPO = customer/production
-ODOO_SH_SSH_KEY = <SSH private key for git.odoo.sh>
-```
-
-**Notifications (optional)**:
-```
-SLACK_WEBHOOK_URL = <Slack webhook URL>
-```
-
-### 2. VM Preparation
-
-On each VM (UAT and PROD):
-
-```bash
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
-
-# Install docker-compose
-sudo curl -L \
-  "https://github.com/docker/compose/releases/download/v2.10.0/docker-compose-$(uname -s)-$(uname -m)" \
-  -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-
-# Create directories
-sudo mkdir -p /opt/odoo-mta
-sudo mkdir -p /backups/odoo-mta/test
-sudo mkdir -p /backups/odoo-mta/prod
-sudo chown -R $USER:$USER /opt/odoo-mta /backups
-
-# Clone repository
-cd /opt/odoo-mta
-git clone https://github.com/resultrum/odoo-mta.git .
-
-# Create .env file
-cp .env.example .env
-# Edit .env with secrets
-```
-
-### 3. Test Workflow Locally
-
-Use `act` to test workflows locally:
+Test workflows locally before pushing:
 
 ```bash
 # Install act
 brew install act  # macOS
 sudo apt install act  # Linux
-choco install act  # Windows
 
 # Run CI workflow
 act push --job lint-and-test
 
-# Run with secrets
-act -s DOCKER_HUB_USERNAME=resultrum \
-    -s DOCKER_HUB_TOKEN=your_token \
-    push --job build-and-push-uat
+# Run with all jobs
+act push
 ```
 
 ---
 
 ## Usage
 
-### PR Workflow
+### For Developers
 
-1. **Create feature branch**:
-   ```bash
-   git checkout -b feature/my-feature
-   ```
+#### 1. Create a Feature Branch
 
-2. **Make changes, test locally**:
-   ```bash
-   pytest tests/
-   docker-compose up -d
-   # Test in http://localhost:8069
-   ```
+```bash
+git checkout -b feature/my-new-feature
+```
 
-3. **Push to GitHub**:
-   ```bash
-   git push -u origin feature/my-feature
-   ```
+#### 2. Make Changes and Test Locally
 
-4. **CI runs automatically**:
-   - Code linting
-   - Tests execution
-   - Coverage check (must be ≥ 80%)
+```bash
+# Test code quality
+black --check .
+isort --check .
+flake8 .
 
-5. **Fix any issues, push again**:
-   ```bash
-   # Fix code
-   pytest tests/  # Verify locally
-   git push
-   ```
+# Or use pre-commit hooks
+git add .
+git commit -m "feat: add my feature"  # Runs pre-commit hooks automatically
+```
 
-6. **Once CI passes, create PR and merge to main**
+#### 3. Push to GitHub
 
-### Deploy to UAT
+```bash
+git push -u origin feature/my-new-feature
+```
 
-**Option 1: Automatic** (after merge to main)
-- Merge PR to main
-- Build workflow pushes image
-- Deploy workflow auto-deploys to UAT
+#### 4. CI Runs Automatically
 
-**Option 2: Manual**
-- Go to GitHub Actions
-- Select "Deploy UAT" workflow
-- Click "Run workflow"
-- Select image tag
-- Wait for deployment
+- GitHub Actions triggers
+- 5 jobs run in parallel
+- Results shown in PR status
 
-### Deploy to PROD
+#### 5. Fix Any Issues
 
-1. Go to GitHub Actions → Deploy PROD
-2. Click "Run workflow"
-3. Select image version from dropdown
-4. Type confirmation phrase: `I understand this deploys to PRODUCTION`
-5. (Optional) Specify backup path
-6. Click "Run workflow"
-7. Monitor deployment in logs
+```bash
+# Fix code
+black .
+isort .
+# ... make your changes ...
 
-### Deploy to Odoo.sh
+git add .
+git commit -m "fix: address CI issues"
+git push
+```
 
-1. Go to GitHub Actions → Deploy Odoo.sh
-2. Click "Run workflow"
-3. Select branch (default: main)
-4. Type confirmation: `Deploy to Odoo.sh`
-5. Monitor at: https://accounts.odoo.com
+#### 6. Merge When CI Passes
 
-### Refresh UAT from PROD
+Once all checks pass ✅, merge to main via GitHub UI.
 
-1. Go to GitHub Actions → Refresh UAT from PROD
-2. Click "Run workflow"
-3. Type confirmation: `Refresh UAT database from PROD`
-4. Choose: Anonymize data (yes/no)
-5. Monitor in workflow logs
+### For DevOps / Release Management
+
+#### Building a Docker Image
+
+```bash
+# Image is built automatically on merge to main or master-iteration*
+# Check GitHub Actions for build status
+
+# Pulling a built image
+docker pull ghcr.io/<organization>/<project>:latest
+docker pull ghcr.io/<organization>/<project>:v1.0.0
+```
+
+#### Creating a Release
+
+```bash
+# Tag a commit
+git tag -a v1.0.0 -m "Release version 1.0.0"
+
+# Push tag to GitHub
+git push origin v1.0.0
+
+# Docker build and push happens automatically!
+```
 
 ---
 
 ## Troubleshooting
 
-### CI Fails: Coverage Below 80%
+### CI Fails: Code Formatting Issues
 
-**Problem**: Test coverage below 80%
-
-**Solution**:
-1. Write more tests to cover missing code paths
-2. Use `pytest --cov-report=html` to see coverage map
-3. Check `htmlcov/index.html` for uncovered lines
-
-### CI Fails: Coverage Regression
-
-**Problem**: Coverage decreased from previous version
+**Problem**: Black or isort checks fail
 
 **Solution**:
-1. Add tests for newly uncovered code
-2. Or remove code that's no longer needed
-3. Check workflow logs for exact regression details
+```bash
+# Auto-format code
+black .
+isort .
 
-### UAT Deployment Fails: Health Check Timeout
+# Commit and push
+git add .
+git commit -m "style: auto-format code"
+git push
+```
 
-**Problem**: Containers start but health check fails
+### CI Fails: Flake8 Linting
 
-**Solution**:
-1. Check UAT VM logs: `docker-compose logs -f odoo-mta-web`
-2. Check database status: `docker-compose exec postgres pg_isready`
-3. Automatic rollback should have already occurred
-4. Check previous backup is restored
-
-### PROD Deployment: Manual Rollback Needed
-
-If PROD health check fails:
-
-1. SSH to PROD VM:
-   ```bash
-   ssh ubuntu@prod-vm-host
-   ```
-
-2. Check status:
-   ```bash
-   cd /opt/odoo-mta-prod
-   docker-compose ps
-   docker-compose logs
-   ```
-
-3. Restore from backup:
-   ```bash
-   # Find latest backup manifest
-   ls -t /backups/odoo-mta/prod/manifest_*.json | head -1
-
-   # Restore database
-   BACKUP_DIR=/backups/odoo-mta/prod
-   LATEST=$(ls -t "$BACKUP_DIR"/database_*.dump.gz | head -1)
-   zcat "$LATEST" | docker exec -i odoo-mta-db psql -U odoo -d mta-prod
-
-   # Restart
-   docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
-   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-   ```
-
-4. Verify:
-   ```bash
-   docker-compose ps
-   curl http://localhost:8069
-   ```
-
-### GitHub Secrets Not Working
-
-**Problem**: Workflow fails with "undefined variable"
+**Problem**: Flake8 violations found
 
 **Solution**:
-1. Go to Settings → Secrets
-2. Verify all required secrets are present
-3. Check secret names match workflow references
-4. Redeploy workflow after adding secrets
+1. Read the error message in GitHub Actions logs
+2. Fix the issue in your code
+3. Example fixes:
+   - Remove unused imports: `import os  # noqa: F401` or delete
+   - Line too long: Break into multiple lines
+   - Missing docstring: Add docstring
 
-### Docker Image Not Found
+### CI Fails: Docker Build
 
-**Problem**: Deploy fails with "image not found"
-
-**Solution**:
-1. Check Docker Hub: resultrum/odoo-mta
-2. Verify Docker Hub credentials are correct
-3. Check build workflow completed successfully
-4. For manual deploys, ensure image tag exists
-
-### Odoo.sh SSH Connection Fails
-
-**Problem**: Can't push to git.odoo.sh
+**Problem**: Docker image fails to build
 
 **Solution**:
-1. Verify ODOO_SH_SSH_KEY is correct
-2. Test SSH locally:
-   ```bash
-   ssh -i ~/.ssh/odoo_sh git@git.odoo.sh
-   ```
-3. Check if key is added to git.odoo.sh
-4. Verify ODOO_SH_REPO path is correct
+1. Check workflow logs for error message
+2. Test locally: `docker build -t test:latest .`
+3. Common issues:
+   - Missing file in COPY command
+   - Invalid Dockerfile syntax
+   - Dependency not installable
+
+### CI Fails: Module Tests
+
+**Problem**: Custom module tests fail
+
+**Solution**:
+1. Check workflow logs for test output
+2. Run locally: `docker-compose up -d && docker-compose exec web pytest tests/`
+3. Check test files in: `addons/custom/<module>/tests/`
+
+### GitHub Actions Not Triggering
+
+**Problem**: Push code but CI doesn't run
+
+**Solution**:
+1. Verify branch name matches workflow triggers:
+   - `main`, `develop`, or `master-iteration*`
+2. Check `.github/workflows/` files exist
+3. Verify `.github/workflows/ci.yml` has correct `on:` section
+
+### Docker Image Not Pushed
+
+**Problem**: Build passes but image not in GHCR
+
+**Solution**:
+1. Check branch: only `main`, `master-iteration*`, or tags push
+2. Verify workflow completed successfully
+3. Check GHCR: https://github.com/orgs/<organization>/packages
+4. Check GitHub Actions logs for error
 
 ---
 
-## Monitoring & Alerts
+## How It All Works Together
 
-### Check Workflow Status
-
-- GitHub Actions tab in repository
-- Each workflow shows: ✅ Success or ❌ Failed
-- Click workflow for detailed logs
-
-### Monitor Deployments
-
-**UAT**:
-- Access: http://uat-vm:8069
-- Logs: `docker-compose logs -f`
-
-**PROD**:
-- Access: http://prod-vm:8069
-- Logs: `/opt/odoo-mta-prod/docker-compose logs -f`
-
-**Odoo.sh**:
-- Dashboard: https://accounts.odoo.com
-- Check "Logs" tab for deployment status
-
-### Backup Verification
-
-```bash
-# List recent backups
-ls -lh /backups/odoo-mta/{test,prod}/
-
-# Check backup manifest
-cat /backups/odoo-mta/prod/manifest_*.json
-
-# Verify backup integrity
-gzip -t /backups/odoo-mta/prod/database_*.dump.gz
+```
+Developer commits code
+    ↓
+GitHub detects push
+    ↓
+CI Workflow runs (5 jobs in parallel):
+├─ lint-and-test: ✅ Checks formatting, runs tests
+├─ security-check: ✅ Scans for secrets
+├─ build-check: ✅ Verifies Docker builds
+├─ module-scan: ✅ Lists custom modules
+└─ odoo-module-test: ✅ Tests with PostgreSQL
+    ↓
+All checks pass? ✅
+    ↓
+Merge to main
+    ↓
+Docker Build Workflow:
+├─ Build Docker image
+├─ Tag as ghcr.io/org/project:latest
+└─ Push to GHCR
+    ↓
+Image ready to deploy!
 ```
 
 ---
 
-## Performance Notes
+## Pre-commit Hooks
 
-### Typical Deployment Times
+This template includes pre-commit hooks to catch issues before pushing:
 
-- **CI Pipeline**: 2-5 minutes
-- **Build Image**: 5-10 minutes
-- **Deploy UAT**: 5 minutes
-- **Deploy PROD**: 10 minutes (includes backups)
-- **Refresh UAT**: 10-15 minutes (includes anonymization)
-- **Odoo.sh Deploy**: 5-10 minutes
+```bash
+# Hooks installed automatically on clone
+# They run on: git commit
 
-### Resource Requirements
+# Current hooks:
+- black (Python formatting)
+- isort (Import sorting)
+- flake8 (Linting)
+- trailing-whitespace
+- end-of-file-fixer
+- yaml-validate
+```
 
-- VM: Minimum 2 CPU, 4GB RAM (recommended: Standard_D2s_v3)
-- Storage: 50GB+ for images and backups
-- Network: Standard internet connection sufficient
+To manually run hooks:
+
+```bash
+pre-commit run --all-files
+```
+
+---
+
+## Integration with Your IDE
+
+### PyCharm
+
+1. Open Settings → Tools → Python Integrated Tools
+2. Set Default test runner: `pytest`
+3. Run tests directly in IDE: Alt+Shift+F10
+
+### VS Code
+
+1. Install Python extension
+2. Select Python interpreter from docker-compose
+3. Run tests with Flask extension
+
+See `docs/PYCHARM_SETUP.md` for detailed PyCharm setup.
 
 ---
 
 ## Next Steps
 
-1. [Setup Secrets in GitHub](./CI_CD_GUIDE.md#setup--configuration)
-2. [Configure your VMs](./CI_CD_GUIDE.md#2-vm-preparation)
-3. [Test workflow locally with act](./CI_CD_GUIDE.md#3-test-workflow-locally)
-4. [Deploy to UAT](./CI_CD_GUIDE.md#deploy-to-uat)
-5. [Test UAT environment](./TESTING_GUIDE.md)
-6. [Deploy to PROD](./CI_CD_GUIDE.md#deploy-to-prod)
+1. **Clone and setup**: `./scripts/setup-new-project.sh <name> <module> <org>`
+2. **Local development**: `docker-compose up -d`
+3. **Make changes**: Edit code in `addons/custom/`
+4. **Commit**: `git commit` (pre-commit hooks run automatically)
+5. **Push**: `git push origin main` (CI triggers automatically)
+6. **Monitor**: Check GitHub Actions tab for build status
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-10-30
-**Maintained by**: DevOps Team
+**Document Version**: 2.0 (Template Edition)
+**Last Updated**: 2025-11-18
+**Status**: Production Ready

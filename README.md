@@ -25,26 +25,29 @@ Ce repository est un **template** pour créer de nouveaux projets Odoo. Il conti
 
 ### Méthode 1: GitHub (Recommandée)
 ```bash
-# Aller sur https://github.com/resultrum/odoo-template
-# Cliquer sur "Use this template" → "Create a new repository"
-# Donner un nom: odoo-<trigramme> (ex: odoo-pbt pour Passbolt)
+# 1. Aller sur https://github.com/<org>/odoo-template
+# 2. Cliquer sur "Use this template" → "Create a new repository"
+# 3. Donner un nom: odoo-<project> (ex: odoo-crm)
 ```
 
 ### Méthode 2: Clone + Setup
 ```bash
 # 1. Cloner le template
-git clone https://github.com/resultrum/odoo-template.git odoo-<trigramme>
-cd odoo-<trigramme>
+git clone https://github.com/<org>/odoo-template.git odoo-<project>
+cd odoo-<project>
 
 # 2. Exécuter le script de setup
-./scripts/setup-new-project.sh odoo-<trigramme> <module_name> <organization>
+./scripts/setup-new-project.sh odoo-<project> <module_name> <organization> [enterprise|community]
 
-# Exemple:
-./scripts/setup-new-project.sh odoo-pbt pbt_base resultrum
+# Exemple pour Community:
+./scripts/setup-new-project.sh odoo-crm crm_base mycompany community
+
+# Exemple pour Enterprise:
+./scripts/setup-new-project.sh odoo-pbt pbt_base mycompany enterprise
 
 # 3. Committer les changements
 git add .
-git commit -m "chore: setup new project odoo-<trigramme>"
+git commit -m "chore: setup new project odoo-<project>"
 
 # 4. Configurer et lancer
 cp .env.example .env

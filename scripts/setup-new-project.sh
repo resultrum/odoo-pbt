@@ -141,6 +141,30 @@ if [ -f "README.md" ]; then
   echo -e "   ${GREEN}✅ Updated README.md${NC}"
 fi
 
+# 6b. Update scripts (backup.sh, etc.)
+echo -e "${YELLOW}6️⃣b Updating scripts...${NC}"
+if [ -d "scripts" ]; then
+  for file in scripts/*.sh; do
+    if [ -f "$file" ]; then
+      sed -i '' "s/odoo-mta/$PROJECT_NAME/g" "$file"
+      sed -i '' "s/odoo_mta/$(echo $PROJECT_NAME | tr '-' '_')/g" "$file"
+    fi
+  done
+  echo -e "   ${GREEN}✅ Updated scripts${NC}"
+fi
+
+# 6c. Update infrastructure (Bicep templates)
+echo -e "${YELLOW}6️⃣c Updating infrastructure templates...${NC}"
+if [ -d "infrastructure" ]; then
+  for file in infrastructure/*.bicep infrastructure/*.json; do
+    if [ -f "$file" ]; then
+      sed -i '' "s/odoo-mta/$PROJECT_NAME/g" "$file"
+      sed -i '' "s/odoo_mta/$(echo $PROJECT_NAME | tr '-' '_')/g" "$file"
+    fi
+  done
+  echo -e "   ${GREEN}✅ Updated infrastructure${NC}"
+fi
+
 # 7. Reset VERSION
 echo -e "${YELLOW}7️⃣ Resetting VERSION...${NC}"
 if [ -f "VERSION" ]; then

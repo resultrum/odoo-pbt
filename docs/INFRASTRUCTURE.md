@@ -1,6 +1,8 @@
 # Infrastructure as Code with Bicep
 
-Deploy complete Odoo-MTA infrastructure on Azure in under 30 minutes.
+Deploy your Odoo template infrastructure on Azure in under 30 minutes.
+
+This guide shows how to deploy your Odoo project to Azure using Infrastructure as Code (Bicep).
 
 ---
 
@@ -10,12 +12,13 @@ Deploy complete Odoo-MTA infrastructure on Azure in under 30 minutes.
 # 1. Login to Azure
 az login
 
-# 2. Create resource group
-az group create --name rg-odoo-mta --location eastus
+# 2. Create resource group (replace "odoo-myproject" with your project name)
+RESOURCE_GROUP="rg-odoo-myproject"
+az group create --name $RESOURCE_GROUP --location eastus
 
 # 3. Deploy infrastructure
 az deployment group create \
-  --resource-group rg-odoo-mta \
+  --resource-group $RESOURCE_GROUP \
   --template-file infrastructure/main.bicep \
   --parameters infrastructure/parameters.json
 
@@ -88,7 +91,7 @@ Azure Resource Group
 
 ```json
 {
-  "projectName": "odoomta",          // 3-11 chars, lowercase
+  "projectName": "<project>",          // 3-11 chars, lowercase
   "environment": "prod",              // dev, test, prod
   "location": "eastus",              // Azure region
   "vmCount": 1,                      // Number of VMs
@@ -132,17 +135,17 @@ cat ~/.ssh/azure_rsa.pub
 ```bash
 # Create Key Vault
 az keyvault create \
-  --resource-group rg-odoo-mta \
-  --name odoomta-kv
+  --resource-group rg-odoo-<project> \
+  --name <project>-kv
 
 # Store secrets
 az keyvault secret set \
-  --vault-name odoomta-kv \
+  --vault-name <project>-kv \
   --name odoo-db-password \
   --value 'YourSecurePassword123!'
 
 az keyvault secret set \
-  --vault-name odoomta-kv \
+  --vault-name <project>-kv \
   --name odoo-admin-password \
   --value 'AdminPassword123!'
 
@@ -179,7 +182,7 @@ az bicep build --file infrastructure/main.bicep
 
 # Validate deployment
 az deployment group validate \
-  --resource-group rg-odoo-mta \
+  --resource-group rg-odoo-<project> \
   --template-file infrastructure/main.bicep \
   --parameters infrastructure/parameters.json
 ```
@@ -189,7 +192,7 @@ az deployment group validate \
 ```bash
 # Deploy (takes 5-10 minutes)
 az deployment group create \
-  --resource-group rg-odoo-mta \
+  --resource-group rg-odoo-<project> \
   --template-file infrastructure/main.bicep \
   --parameters infrastructure/parameters.json
 
@@ -202,13 +205,13 @@ az deployment group create \
 ```bash
 # Show all outputs
 az deployment group show \
-  --resource-group rg-odoo-mta \
+  --resource-group rg-odoo-<project> \
   --name main \
   --query properties.outputs
 
 # Extract specific values
 PUBLIC_IP=$(az deployment group show \
-  --resource-group rg-odoo-mta \
+  --resource-group rg-odoo-<project> \
   --name main \
   --query 'properties.outputs.publicIPs.value[0].ipAddress' \
   -o tsv)
@@ -234,10 +237,11 @@ docker-compose --version
 ### Step 2: Clone Repository
 
 ```bash
-cd /opt/odoo-mta
+cd /opt/odoo-<project>
 
 # Clone the project
-sudo git clone https://github.com/resultrum/odoo-mta.git .
+# Replace <org> and <project> with your values
+sudo git clone https://github.com/<org>/odoo-<project>.git .
 
 # Fix permissions
 sudo chown -R azureuser:azureuser .
@@ -260,7 +264,7 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 docker-compose ps
 
 # View logs
-docker-compose logs -f odoo-mta-web
+docker-compose logs -f odoo-<project>-web
 
 # Access at: http://<PUBLIC_IP>:8069
 ```
@@ -275,14 +279,14 @@ docker-compose logs -f odoo-mta-web
 
 ```bash
 # 1. Delete old resource group (5 min)
-az group delete --name rg-odoo-mta --yes
+az group delete --name rg-odoo-<project> --yes
 
 # 2. Create new resource group (1 min)
-az group create --name rg-odoo-mta-v2 --location eastus
+az group create --name rg-odoo-<project>-v2 --location eastus
 
 # 3. Deploy infrastructure (10 min)
 az deployment group create \
-  --resource-group rg-odoo-mta-v2 \
+  --resource-group rg-odoo-<project>-v2 \
   --template-file infrastructure/main.bicep \
   --parameters infrastructure/parameters.json
 
@@ -297,20 +301,21 @@ az deployment group create \
 ```bash
 # List available backups
 az storage blob list \
-  --account-name odoomtaprodsa \
+  --account-name <project>prodsa \
   --container-name backups \
   --output table
 
 # Download latest backup
 az storage blob download \
-  --account-name odoomtaprodsa \
+  --account-name <project>prodsa \
   --container-name backups \
   --name "database_2025-10-30_14-30-00.dump.gz" \
   --file /tmp/backup.dump.gz
 
 # Restore to new VM
+# Replace "odoo_<project>_prod" with your database name
 gunzip -c /tmp/backup.dump.gz | \
-  docker exec -i odoo-mta-db psql -U odoo -d mta-prod
+  docker exec -i odoo-<project>-db psql -U odoo -d odoo_<project>_prod
 ```
 
 ---
@@ -330,7 +335,7 @@ Update `parameters.json`:
 Redeploy:
 ```bash
 az deployment group create \
-  --resource-group rg-odoo-mta \
+  --resource-group rg-odoo-<project> \
   --template-file infrastructure/main.bicep \
   --parameters infrastructure/parameters.json
 ```
@@ -362,7 +367,7 @@ resource postgresqlServer 'Microsoft.DBforPostgreSQL/servers@2017-12-01' = {
 ### Azure Portal
 
 1. Go to Azure Portal (portal.azure.com)
-2. Navigate to resource group: `rg-odoo-mta`
+2. Navigate to resource group: `rg-odoo-<project>`
 3. View:
    - VM status
    - Network configuration
@@ -382,7 +387,7 @@ docker stats
 df -h
 
 # Check backup storage
-ls -lh /backups/odoo-mta/prod/
+ls -lh /backups/odoo-<project>/prod/
 ```
 
 ### Cost Analysis
@@ -410,7 +415,7 @@ az cost management forecast create \
 ```bash
 # Check error details
 az deployment group show \
-  --resource-group rg-odoo-mta \
+  --resource-group rg-odoo-<project> \
   --name main \
   --query properties.error
 ```
@@ -420,13 +425,13 @@ az deployment group show \
 ```bash
 # Check Network Security Group rules
 az network nsg rule list \
-  --resource-group rg-odoo-mta \
-  --nsg-name odoomta-test-nsg
+  --resource-group rg-odoo-<project> \
+  --nsg-name <project>-test-nsg
 
 # Add SSH rule if missing
 az network nsg rule create \
-  --resource-group rg-odoo-mta \
-  --nsg-name odoomta-test-nsg \
+  --resource-group rg-odoo-<project> \
+  --nsg-name <project>-test-nsg \
   --name AllowSSH \
   --priority 100 \
   --source-address-prefixes '*' \
@@ -458,10 +463,10 @@ sudo journalctl -u docker -n 50
 
 ```bash
 # Delete resource group (removes everything)
-az group delete --name rg-odoo-mta --yes
+az group delete --name rg-odoo-<project> --yes
 
 # Or keep infrastructure, delete only VMs
-az vm delete --resource-group rg-odoo-mta --name odoomta-test-vm-0 --yes
+az vm delete --resource-group rg-odoo-<project> --name <project>-test-vm-0 --yes
 ```
 
 ---
