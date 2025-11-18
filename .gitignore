@@ -1,0 +1,90 @@
+# Claude Code
+.claude/
+
+# Environment variables (local configuration)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Docker
+.dockerignore
+
+# Odoo Enterprise (local clone)
+odoo-enterprise/
+odoo/
+
+# Node (if using JS tools)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# IDE - Local file storage
+.idea/
+.vscode/
+
+# Git
+.git/
+.gitmodules
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*.swp
+
+# Docker compose local overrides
+docker-compose.override.yml
+
+# Backups
+/backups/
+*.dump
+*.dump.gz
+
+# SSH keys (just in case)
+id_rsa
+id_rsa.pub
+ssh_key
