@@ -28,6 +28,13 @@ if [[ ! "$EDITION" =~ ^(enterprise|community)$ ]]; then
   exit 1
 fi
 
+# Check if we're in template directory
+if [ ! -d "scripts" ] || [ ! -f "scripts/setup-new-project.sh" ]; then
+  echo -e "${RED}❌ This script must be run from the root of the template repository${NC}"
+  echo "Current directory: $(pwd)"
+  exit 1
+fi
+
 if [[ ! "$PROJECT_NAME" =~ ^[a-z0-9-]+$ ]]; then
   echo -e "${RED}❌ Project name must contain only lowercase letters, numbers, and hyphens${NC}"
   exit 1
@@ -54,6 +61,43 @@ echo -e "🏢 Organization:    ${GREEN}$ORG_NAME${NC}"
 EDITION_DISPLAY=$(echo "$EDITION" | cut -c1 | tr '[:lower:]' '[:upper:]')$(echo "$EDITION" | cut -c2-)  # Capitalize first letter
 echo -e "🔧 Edition:         ${GREEN}$EDITION_DISPLAY${NC}"
 echo ""
+
+# ============================================================================
+# Step 0: Clone Odoo Repository (if needed)
+# ============================================================================
+
+if [ ! -d "odoo-enterprise" ]; then
+  echo -e "${YELLOW}0️⃣ Cloning Odoo Repository...${NC}"
+  echo ""
+  echo -e "${BLUE}This is required for development (debugging with breakpoints).${NC}"
+  echo ""
+
+  # Copy .env.example if not exists
+  if [ ! -f ".env" ]; then
+    cp .env.example .env
+    echo -e "${GREEN}✅ Created .env from .env.example${NC}"
+    echo ""
+  fi
+
+  # Call clone script
+  if [ -x "scripts/clone-odoo-repos.sh" ]; then
+    bash scripts/clone-odoo-repos.sh
+    if [ $? -ne 0 ]; then
+      echo -e "${RED}❌ Failed to clone Odoo repository${NC}"
+      echo ""
+      echo -e "${YELLOW}Next Steps:${NC}"
+      echo "1. Fix the SSH/repository issue"
+      echo "2. Run again: bash scripts/setup-new-project.sh $@"
+      exit 1
+    fi
+    echo ""
+  else
+    echo -e "${YELLOW}⚠️  Skipping Odoo clone (script not executable)${NC}"
+  fi
+else
+  echo -e "${YELLOW}0️⃣ Odoo repository already cloned (skipping)${NC}"
+  echo ""
+fi
 
 # 1. Rename custom module
 echo -e "${YELLOW}1️⃣ Renaming custom module...${NC}"

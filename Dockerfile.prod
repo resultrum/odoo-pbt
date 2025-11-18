@@ -1,0 +1,91 @@
+# Production Dockerfile
+# Builds a self-contained image with Odoo and custom modules pre-installed
+# Usage: docker build -f Dockerfile.prod -t odoo-custom:18.0-prod .
+
+# Stage 1: Build (compile requirements, etc.)
+FROM python:3.10-slim as builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Stage 2: Runtime
+FROM odoo:18.0
+
+USER root
+
+# Install production dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    postgresql-client \
+    && pip3 install --break-system-packages git-aggregator \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/odoo
+
+# ============================================================================
+# Copy Odoo Source Code (already cloned locally)
+# ============================================================================
+# This assumes odoo-enterprise/ directory is already cloned and available
+# COPY ./odoo-enterprise /opt/odoo
+
+# For now, we use the official odoo image as base
+# If you need a custom Odoo build, uncomment above and provide Odoo sources
+
+# ============================================================================
+# Copy Custom Modules
+# ============================================================================
+
+# Copy custom addons
+COPY ./addons/custom /mnt/extra-addons/custom
+
+# Copy OCA addons (if available)
+COPY ./addons/oca-addons /mnt/extra-addons/oca-addons
+
+# ============================================================================
+# Copy Configuration
+# ============================================================================
+
+COPY ./odoo.conf /etc/odoo/odoo.conf
+COPY ./entrypoint.sh /entrypoint-custom.sh
+
+RUN chmod +x /entrypoint-custom.sh
+
+# ============================================================================
+# Production Configuration
+# ============================================================================
+
+# Set to non-root user (security best practice)
+RUN useradd -m -d /opt/odoo odoo || true
+RUN chown -R odoo:odoo /mnt/extra-addons /opt/odoo
+
+USER odoo
+
+# ============================================================================
+# Health Check
+# ============================================================================
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8069/web/health')" || exit 1
+
+# ============================================================================
+# Entrypoint
+# ============================================================================
+
+ENTRYPOINT ["/entrypoint-custom.sh"]
+CMD ["odoo"]
+
+# ============================================================================
+# Labels (for Docker metadata)
+# ============================================================================
+
+LABEL version="0.1.0" \
+      description="Odoo 18 with custom modules for production" \
+      maintainer="your-organization" \
+      org.opencontainers.image.source="https://github.com/your-org/odoo-custom"
