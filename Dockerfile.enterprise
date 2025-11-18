@@ -1,0 +1,49 @@
+# Dockerfile.enterprise
+#
+# IMPORTANT: Enterprise Edition Setup
+#
+# The Enterprise image is not publicly available on Docker Hub.
+# You have THREE options to build this Dockerfile:
+#
+# Option 1: Use Odoo Enterprise Nightly Builds (Recommended for development)
+# =========================================================================
+# FROM ghcr.io/odoo/odoo:18.0-enterprise
+#
+# This requires GitHub authentication. Set up your GitHub token:
+#   docker login ghcr.io -u <github-username> -p <github-token>
+#
+# Option 2: Use Official Odoo Enterprise Registry
+# ================================================
+# Contact Odoo sales to get credentials for:
+#   nightly.odoo.com/18.0/nightly/deb/
+#
+# Option 3: Build from source
+# ============================
+# Get the Enterprise source code from:
+#   https://github.com/odoo/odoo (Enterprise fork)
+#
+# Then use the Odoo Dockerfile with Enterprise source:
+#   git clone --branch 18.0 https://github.com/odoo/odoo.git
+#   cd odoo && docker build -t my-odoo-enterprise:18.0 .
+
+# For now, we'll use Community as base and you can override this
+FROM odoo:18.0
+
+USER root
+
+# Install git and git-aggregator
+RUN apt-get update && apt-get install -y \
+    git \
+    && pip3 install --break-system-packages git-aggregator \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy custom entrypoint script
+COPY entrypoint.sh /entrypoint-custom.sh
+RUN chmod +x /entrypoint-custom.sh
+
+ENTRYPOINT ["/entrypoint-custom.sh"]
+CMD ["odoo"]
+
+# TODO: Replace "FROM odoo:18.0" with one of the options above
+# See comments at the top of this Dockerfile for detailed instructions

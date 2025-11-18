@@ -1,104 +1,217 @@
-# odoo-mta
+# Odoo Template
 
-**MOTECMA - Metrum Odoo Technical Management**
-**Trigram : MTA**
+Template reusable pour créer rapidement de nouveaux projets Odoo Enterprise.
 
-Projet Odoo Community 18.0 pour la gestion technique et le management de projets chez Metrum.
-
-## Objectifs
-
-- Planning développeurs avec adéquation charge/capacité
-- Fiche projet complète (hébergement, contrat, run, clients)
-- Helpdesk pour le support
-- Intégration IA (phase 2)
-
-## Structure
-
-```
-addons/
-├── custom/                 # Modules custom Metrum (mta_*)
-├── oca/                    # Dépôts OCA (fusionnés par git-aggregator)
-│   ├── helpdesk/           # 22 modules Helpdesk OCA
-│   └── server-tools/       # (Future)
-└── oca-addons/             # Symlinks vers tous les modules OCA
-```
-
-## Stack Technique
-
-- Odoo Community 18.0
-- PostgreSQL 15
-- Docker + Docker Compose
-- Git-Aggregator (fusion multi-repos)
-- Ansible (déploiement Azure)
-
-## Nomenclature
-
-- **Projet** : odoo-mta
-- **Modules custom** : mta_*
-- **Trigram** : MTA
-
-## 🚀 Quick Start
-
-### Prérequis
-
-- Docker Desktop installé et lancé
-- Git avec SSH configuré pour GitHub
-- PyCharm (recommandé)
-
-### Lancement en local
-```bash
-# 1. Clone le projet
-git clone https://github.com/resultrum/odoo-mta.git
-cd odoo-mta
-
-# 2. Copier le fichier d'environnement
-cp .env.example .env
-
-# 3. Créer les symlinks OCA
-./scripts/create-oca-symlinks.sh
-
-# 4. Lancer les conteneurs Docker (mode dev)
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-
-# 5. Accéder à Odoo
-# http://localhost:8069
-# Database: mta-dev
-# Username: admin
-# Password: admin123
-```
-
-## 📚 Documentation
-
-- **[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)** - Guide complet pour les développeurs
-  - Architecture et workflows
-  - Scénarios : modifier un module OCA, ajouter un repo, créer un module custom
-  - Commandes utiles et dépannage
-
-- **[TESTING_GUIDE.md](./TESTING_GUIDE.md)** - Guide de test
-  - 5 tests de validation de la setup
-  - Scénarios de test pour git-aggregator
-  - Checklist de vérification
-
-## Roadmap
-
-### Phase 1 : Base (Semaine 1)
-- [ ] Setup infrastructure
-- [ ] Installation Odoo + modules de base
-- [ ] Configuration helpdesk
-
-### Phase 2 : Planning (Semaine 1)
-- [ ] Vue charge/capacité
-- [ ] Planning développeurs
-
-### Phase 3 : Fiche projet (Semaine 1)
-- [ ] Extension modèle projet
-- [ ] Vues personnalisées
-
-### Phase 4 : IA (Bonus)
-- [ ] Intégration API IA
-- [ ] Automatisations
+**Version**: 0.1.0
+**Odoo Version**: 18.0 Enterprise
+**Stack**: Docker + Docker Compose + PostgreSQL
 
 ---
 
-**Projets liés :**
-- **odoo-mtt** (MOTECTO) : Metrum Odoo Technical Topic
+## 📋 À propos de ce Template
+
+Ce repository est un **template** pour créer de nouveaux projets Odoo. Il contient:
+
+- ✅ Structure de projet standardisée
+- ✅ Docker + Docker Compose configurés
+- ✅ Module custom de base (renommable)
+- ✅ Scripts d'automatisation
+- ✅ Configuration PyCharm pour développement local
+- ✅ Scripts de base de données (anonymisation, etc.)
+
+---
+
+## 🚀 Créer un Nouveau Projet depuis ce Template
+
+### Méthode 1: GitHub (Recommandée)
+```bash
+# Aller sur https://github.com/resultrum/odoo-template
+# Cliquer sur "Use this template" → "Create a new repository"
+# Donner un nom: odoo-<trigramme> (ex: odoo-pbt pour Passbolt)
+```
+
+### Méthode 2: Clone + Setup
+```bash
+# 1. Cloner le template
+git clone https://github.com/resultrum/odoo-template.git odoo-<trigramme>
+cd odoo-<trigramme>
+
+# 2. Exécuter le script de setup
+./scripts/setup-new-project.sh odoo-<trigramme> <module_name> <organization>
+
+# Exemple:
+./scripts/setup-new-project.sh odoo-pbt pbt_base resultrum
+
+# 3. Committer les changements
+git add .
+git commit -m "chore: setup new project odoo-<trigramme>"
+
+# 4. Configurer et lancer
+cp .env.example .env
+docker-compose up -d
+```
+
+---
+
+## 🏗️ Structure du Projet
+
+```
+.
+├── addons/
+│   ├── custom/              # Modules custom (renommé durant setup)
+│   │   └── mta_base/        # Sera renommé en <module_name>
+│   ├── oca/                 # Dépôts OCA fusionnés (via git-aggregator)
+│   └── oca-addons/          # Symlinks vers modules OCA
+│
+├── scripts/
+│   ├── setup-new-project.sh # Setup automatique du projet
+│   ├── pycharm-setup.sh     # Configuration PyCharm
+│   ├── anonymize_database.sql
+│   └── ...
+│
+├── .github/workflows/       # CI/CD pipelines
+├── docker-compose.yml       # Configuration base
+├── docker-compose.dev.yml   # Overrides développement
+├── docker-compose.prod.yml  # Overrides production
+├── Dockerfile               # Image Odoo custom
+├── odoo.conf               # Configuration Odoo
+├── repos.yml               # Configuration Git-Aggregator
+│
+└── README.md               # Ce fichier
+```
+
+---
+
+## 💻 Développement Local avec PyCharm
+
+### Prérequis
+- Docker Desktop
+- PyCharm Professional (Community a support limité)
+- Git + SSH configuré
+
+### Setup
+```bash
+# 1. Lancer le script PyCharm
+./scripts/pycharm-setup.sh
+
+# 2. Dans PyCharm:
+#    - Configurer Docker (Preferences → Docker)
+#    - Configurer Python Interpreter (Docker Compose)
+#    - Service: web
+#    - Path: /usr/local/bin/python3
+
+# 3. Lancer via PyCharm ou:
+docker-compose up -d
+```
+
+Voir `docs/PYCHARM_SETUP.md` pour les détails complets.
+
+---
+
+## 🗄️ Gestion des Dépôts OCA
+
+Le fichier `repos.yml` vide par défaut. Ajouter des dépôts OCA selon vos besoins:
+
+```yaml
+./addons/oca/account-invoicing:
+  remotes:
+    oca: git@github.com:OCA/account-invoicing.git
+    resultrum: git@github.com:resultrum/account-invoicing.git
+  merges:
+    - oca 18.0
+  target: resultrum master-18.0
+```
+
+Pour peupler automatiquement: `./scripts/setup-repositories.sh`
+
+---
+
+## 🔐 Anonymisation de Base de Données
+
+Pour utiliser une DB de production en développement:
+
+```bash
+# 1. Faire un dump de production
+pg_dump -U odoo production_db > production.sql
+
+# 2. Restaurer en local
+createdb dev_db
+psql dev_db < production.sql
+
+# 3. Anonymiser (Odoo Sh compatible)
+psql -U odoo -d dev_db -f scripts/anonymize_database.sql
+
+# 4. Sélectionner la DB dans Odoo
+# localhost:8069 → Créer DB → restaurer depuis backup
+```
+
+Voir `scripts/anonymize_database.sql` pour les détails (tokens, mails, etc.)
+
+---
+
+## 📖 Documentation
+
+- **docs/PYCHARM_SETUP.md** - Configuration PyCharm détaillée
+- **docs/CI_CD_GUIDE.md** - Pipelines GitHub Actions
+- **docs/INFRASTRUCTURE.md** - Déploiement sur Azure
+
+---
+
+## 🔄 Workflows Typiques
+
+### Modifier un Module OCA
+```bash
+# 1. Le module est cloné dans addons/oca/<repo-name>
+# 2. Éditer les fichiers
+# 3. Commit dans le fork OCA
+# 4. Merger via repos.yml (optionnel)
+```
+
+### Créer un Module Custom
+```bash
+# 1. Dans addons/custom/<module-name>/
+# 2. Créer __manifest__.py
+# 3. Implémenter votre logique
+# 4. Installer dans Odoo via Apps
+```
+
+### Ajouter une Dépendance OCA
+```bash
+# 1. Éditer repos.yml
+# 2. Ajouter le repo (voir exemple ci-dessus)
+# 3. docker-compose down && docker-compose up -d
+# 4. Rafraîchir Apps dans Odoo (Ctrl+Shift+R)
+```
+
+---
+
+## 🚨 Troubleshooting
+
+**Port 8069 déjà utilisé?**
+```bash
+docker-compose down
+# Ou modifier docker-compose.yml: ports: ["8070:8069"]
+```
+
+**Module custom pas détecté?**
+```bash
+# Vérifier addons_path dans odoo.conf
+# Redémarrer: docker-compose restart web
+# Rafraîchir: Odoo → Apps → Ctrl+Shift+R
+```
+
+**Erreur de connexion DB?**
+```bash
+docker-compose logs web | grep -i postgres
+# Vérifier .env: DB_HOST, DB_USER, DB_PASSWORD
+```
+
+---
+
+## 📝 License
+
+Propriétaire Resultrum
+
+---
+
+**Questions?** Voir la documentation dans `docs/` ou les scripts dans `scripts/`
