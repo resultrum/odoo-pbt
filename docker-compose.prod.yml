@@ -6,20 +6,20 @@ version: '3.8'
 
 services:
   web:
-    image: resultrum/odoo-mta:prod-latest  # Use production image
-    container_name: odoo-mta-web-prod
+    image: ${DOCKER_REGISTRY}/${DOCKER_ORG}/${PROJECT_NAME}:prod-latest
+    container_name: ${PROJECT_NAME}-web-prod
 
     # Production environment variables
     environment:
       # Database
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: mta-prod
-      DB_USER: odoo
-      DB_PASSWORD: ${DB_PASSWORD}  # Must be set via environment
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}  # ⚠️ Must be set via environment variables in production
 
       # Odoo settings
-      ODOO_ADMIN_PASSWORD: ${ODOO_ADMIN_PASSWORD}  # Must be set via environment
+      ODOO_ADMIN_PASSWORD: ${ODOO_ADMIN_PASSWORD}  # ⚠️ Must be set via environment variables in production
 
       # Production flags
       ENABLE_GIT_AGGREGATE: "false"  # Don't run git-aggregator in production
@@ -82,13 +82,13 @@ services:
 
   postgres:
     image: postgres:15-alpine
-    container_name: odoo-mta-db-prod
+    container_name: ${PROJECT_NAME}-db-prod
 
     # Production environment
     environment:
-      POSTGRES_USER: odoo
-      POSTGRES_PASSWORD: ${DB_PASSWORD}  # Must be set via environment
-      POSTGRES_DB: mta-prod
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}  # ⚠️ Must be set via environment variables in production
+      POSTGRES_DB: ${DB_NAME}
 
       # PostgreSQL settings for production
       POSTGRES_INITDB_ARGS: >
@@ -109,14 +109,14 @@ services:
     volumes:
       - postgres-prod-data:/var/lib/postgresql/data
       # Optional: mount backup location
-      - ${BACKUP_PATH:-/backups/odoo-mta/prod}:/backups:ro
+      - ${BACKUP_PATH:-/backups/odoo}:/backups:ro
 
     # Restart policy
     restart: always
 
     # Health check
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U odoo -d mta-prod"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -139,7 +139,7 @@ services:
   nginx:
     # Optional: Use nginx as reverse proxy in production
     image: nginx:alpine
-    container_name: odoo-mta-nginx-prod
+    container_name: ${PROJECT_NAME}-nginx-prod
     restart: always
 
     ports:
@@ -179,4 +179,4 @@ volumes:
 
 networks:
   default:
-    name: odoo-mta-prod
+    name: ${PROJECT_NAME}-prod

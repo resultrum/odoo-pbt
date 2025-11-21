@@ -1,13 +1,14 @@
 services:
   web:
     build: .
-    container_name: odoo-mta-web
+    container_name: ${PROJECT_NAME}-web
     depends_on:
       - db
     ports:
-      - "8069:8069"
+      - "${ODOO_PORT}:8069"
+      - "${ODOO_LONGPOLLING_PORT}:8072"
     volumes:
-      # Modules (read-only en prod)
+      # Modules (read-only)
       - ./addons/custom:/mnt/extra-addons/custom:ro
       - ./addons/oca:/mnt/extra-addons/oca:ro
       - ./addons/oca-addons:/mnt/extra-addons/oca-addons:ro
@@ -18,24 +19,26 @@ services:
       # Data
       - odoo-web-data:/var/lib/odoo
     environment:
-      - HOST=db
-      - USER=odoo
-      - PASSWORD=odoo
-      - ENABLE_GIT_AGGREGATE=false  # PROD: pas de git-aggregate
+      - HOST=${DB_HOST}
+      - PORT=${DB_PORT}
+      - USER=${DB_USER}
+      - PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - ENABLE_GIT_AGGREGATE=false
     command: --dev=reload
 
   db:
     image: postgres:15
-    container_name: odoo-mta-db
+    container_name: ${PROJECT_NAME}-db
     environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=odoo
-      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - postgres-data:/var/lib/postgresql/data/pgdata
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
 
 volumes:
   odoo-web-data:

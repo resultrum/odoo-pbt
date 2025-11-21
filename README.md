@@ -28,9 +28,15 @@ Ce repository est un **template** pour créer de nouveaux projets Odoo. Il conti
 # 1. Aller sur https://github.com/<org>/odoo-template
 # 2. Cliquer sur "Use this template" → "Create a new repository"
 # 3. Donner un nom: odoo-<project> (ex: odoo-crm)
+# 4. Cloner votre nouveau repository
+git clone https://github.com/<org>/odoo-<project>.git
+cd odoo-<project>
+
+# 5. Exécuter le script de setup
+./scripts/setup-new-project.sh odoo-<project> <module_name> <organization> [enterprise|community]
 ```
 
-### Méthode 2: Clone + Setup
+### Méthode 2: Clone Local + Setup
 ```bash
 # 1. Cloner le template
 git clone https://github.com/<org>/odoo-template.git odoo-<project>
@@ -47,12 +53,35 @@ cd odoo-<project>
 
 # 3. Committer les changements
 git add .
-git commit -m "chore: setup new project odoo-<project>"
+git commit -m "chore: setup new project odoo-<project> - <edition> edition"
 
 # 4. Configurer et lancer
 cp .env.example .env
 docker-compose up -d
 ```
+
+### Après Setup (Enterprise Uniquement)
+Si vous avez choisi **enterprise**:
+
+1. **Mettre à jour le Dockerfile** pour l'image Enterprise:
+   ```bash
+   # Edit Dockerfile and uncomment ONE of these:
+
+   # Option A (Recommended): GitHub Enterprise Image
+   FROM ghcr.io/odoo/odoo:18.0-enterprise
+   # First: docker login ghcr.io -u <username> -p <token>
+
+   # Option B: Community Edition (dev/test only)
+   FROM odoo:18.0  # ✅ Already configured
+
+   # Option C: Build from Odoo Enterprise source
+   ```
+
+2. **Reconstruire l'image Docker:**
+   ```bash
+   docker-compose down
+   docker-compose up -d --build
+   ```
 
 ---
 
@@ -90,24 +119,28 @@ docker-compose up -d
 ### Prérequis
 - Docker Desktop
 - PyCharm Professional (Community a support limité)
-- Git + SSH configuré
+- Git + SSH configuré (optionnel, seulement pour clone Odoo)
 
-### Setup
+### Setup Rapide
 ```bash
-# 1. Lancer le script PyCharm
-./scripts/pycharm-setup.sh
+# 1. Configurer Docker Compose interpreter dans PyCharm:
+#    Settings → Project → Python Interpreter
+#    Add → Docker Compose → odoo-template web service
 
-# 2. Dans PyCharm:
-#    - Configurer Docker (Preferences → Docker)
-#    - Configurer Python Interpreter (Docker Compose)
-#    - Service: web
-#    - Path: /usr/local/bin/python3
-
-# 3. Lancer via PyCharm ou:
+# 2. Lancer les containers:
+cp .env.example .env
 docker-compose up -d
+
+# 3. Debugger ton code custom:
+#    Clic sur le numéro de ligne pour mettre breakpoint
+#    Déclenche l'action dans Odoo
+#    PyCharm pause automatiquement
 ```
 
-Voir `docs/PYCHARM_SETUP.md` pour les détails complets.
+### Documentation
+- **`docs/DEBUGGING_SIMPLE.md`** - Guide simple (sans clone Odoo) ⭐ Start here!
+- **`docs/PYCHARM_SETUP.md`** - Configuration détaillée
+- **`docs/PYCHARM_DEBUGGING.md`** - Debug avancé (avec clone optionnel)
 
 ---
 

@@ -63,50 +63,35 @@ echo -e "🔧 Edition:         ${GREEN}$EDITION_DISPLAY${NC}"
 echo ""
 
 # ============================================================================
-# Step 0: Clone Odoo Repository (if needed)
+# Step 0: Setup Environment Configuration
 # ============================================================================
 
-if [ ! -d "odoo-enterprise" ]; then
-  echo -e "${YELLOW}0️⃣ Cloning Odoo Repository...${NC}"
-  echo ""
-  echo -e "${BLUE}This is required for development (debugging with breakpoints).${NC}"
-  echo ""
+echo -e "${YELLOW}0️⃣ Setting up environment configuration...${NC}"
+echo ""
 
-  # Copy .env.example if not exists
-  if [ ! -f ".env" ]; then
-    cp .env.example .env
-    echo -e "${GREEN}✅ Created .env from .env.example${NC}"
-    echo ""
-  fi
-
-  # Call clone script
-  if [ -x "scripts/clone-odoo-repos.sh" ]; then
-    bash scripts/clone-odoo-repos.sh
-    if [ $? -ne 0 ]; then
-      echo -e "${RED}❌ Failed to clone Odoo repository${NC}"
-      echo ""
-      echo -e "${YELLOW}Next Steps:${NC}"
-      echo "1. Fix the SSH/repository issue"
-      echo "2. Run again: bash scripts/setup-new-project.sh $@"
-      exit 1
-    fi
-    echo ""
-  else
-    echo -e "${YELLOW}⚠️  Skipping Odoo clone (script not executable)${NC}"
-  fi
+# Create .env from .env.example with project-specific values
+if [ ! -f ".env" ]; then
+  cp .env.example .env
+  echo -e "${GREEN}✅ Created .env from .env.example${NC}"
 else
-  echo -e "${YELLOW}0️⃣ Odoo repository already cloned (skipping)${NC}"
-  echo ""
+  echo -e "${YELLOW}⚠️  .env already exists, updating values...${NC}"
 fi
 
-# 1. Rename custom module
+# Update .env with project-specific values
+sed -i '' "s|^PROJECT_NAME=.*|PROJECT_NAME=$PROJECT_NAME|g" .env
+sed -i '' "s|^MODULE_NAME=.*|MODULE_NAME=$MODULE_NAME|g" .env
+sed -i '' "s|^ORG_NAME=.*|ORG_NAME=$ORG_NAME|g" .env
+echo -e "${GREEN}✅ Updated .env with project values${NC}"
+echo ""
+
+# Step 1: Rename custom module
 echo -e "${YELLOW}1️⃣ Renaming custom module...${NC}"
 if [ -d "addons/custom/mta_base" ]; then
   mv "addons/custom/mta_base" "addons/custom/$MODULE_NAME"
   echo -e "   ${GREEN}✅ Renamed mta_base → $MODULE_NAME${NC}"
 fi
 
-# 2. Update module manifest
+# Step 2: Update module manifest
 echo -e "${YELLOW}2️⃣ Updating module manifest...${NC}"
 MODULE_MANIFEST="addons/custom/$MODULE_NAME/__manifest__.py"
 if [ -f "$MODULE_MANIFEST" ]; then
@@ -116,7 +101,7 @@ if [ -f "$MODULE_MANIFEST" ]; then
   echo -e "   ${GREEN}✅ Updated manifest${NC}"
 fi
 
-# 3. Rename and update test files
+# Step 3: Rename and update test files
 echo -e "${YELLOW}3️⃣ Renaming and updating test files...${NC}"
 TEST_DIR="addons/custom/$MODULE_NAME/tests"
 if [ -d "$TEST_DIR" ]; then
@@ -138,18 +123,18 @@ if [ -d "$TEST_DIR" ]; then
   echo -e "   ${GREEN}✅ Updated test files${NC}"
 fi
 
-# 4. Update docker-compose files
+# Step 4: Update docker-compose files
 echo -e "${YELLOW}4️⃣ Updating docker-compose files...${NC}"
 PROJECT_NAME_UNDERSCORE=$(echo "$PROJECT_NAME" | tr '-' '_')
 for file in docker-compose.yml docker-compose.dev.yml docker-compose.prod.yml; do
   if [ -f "$file" ]; then
-    sed -i '' "s|odoo-mta|$PROJECT_NAME|g" "$file"
-    sed -i '' "s|odoo_mta|$PROJECT_NAME_UNDERSCORE|g" "$file"
+    sed -i '' "s|odoo-template|$PROJECT_NAME|g" "$file"
+    sed -i '' "s|odoo_template|$PROJECT_NAME_UNDERSCORE|g" "$file"
     echo -e "   ${GREEN}✅ Updated $file${NC}"
   fi
 done
 
-# 4b. Handle Dockerfile variants based on edition
+# Step 4b: Handle Dockerfile variants based on edition
 echo -e "${YELLOW}4️⃣b Configuring Dockerfile for $EDITION edition...${NC}"
 if [ "$EDITION" = "enterprise" ]; then
   # Use Enterprise Dockerfile (with instructions)
@@ -167,7 +152,7 @@ else
   fi
 fi
 
-# 5. Update GitHub workflows
+# Step 5: Update GitHub workflows
 echo -e "${YELLOW}5️⃣ Updating GitHub workflows...${NC}"
 if [ -d ".github/workflows" ]; then
   for file in .github/workflows/*.yml; do
@@ -179,7 +164,7 @@ if [ -d ".github/workflows" ]; then
   done
 fi
 
-# 6. Update README
+# Step 6: Update README
 echo -e "${YELLOW}6️⃣ Updating README.md...${NC}"
 if [ -f "README.md" ]; then
   sed -i '' "s|odoo-template|$PROJECT_NAME|g" README.md
@@ -187,7 +172,7 @@ if [ -f "README.md" ]; then
   echo -e "   ${GREEN}✅ Updated README.md${NC}"
 fi
 
-# 6b. Update scripts (backup.sh, etc.)
+# Step 6b: Update scripts (backup.sh, etc.)
 echo -e "${YELLOW}6️⃣b Updating scripts...${NC}"
 if [ -d "scripts" ]; then
   for file in scripts/*.sh; do
@@ -199,7 +184,7 @@ if [ -d "scripts" ]; then
   echo -e "   ${GREEN}✅ Updated scripts${NC}"
 fi
 
-# 6c. Update infrastructure (Bicep templates)
+# Step 6c: Update infrastructure (Bicep templates)
 echo -e "${YELLOW}6️⃣c Updating infrastructure templates...${NC}"
 if [ -d "infrastructure" ]; then
   for file in infrastructure/*.bicep infrastructure/*.json; do
@@ -211,7 +196,7 @@ if [ -d "infrastructure" ]; then
   echo -e "   ${GREEN}✅ Updated infrastructure${NC}"
 fi
 
-# 7. Reset VERSION
+# Step 7: Reset VERSION
 echo -e "${YELLOW}7️⃣ Resetting VERSION...${NC}"
 if [ -f "VERSION" ]; then
   echo "0.1.0" > VERSION
@@ -228,23 +213,30 @@ echo ""
 if [ "$EDITION" = "enterprise" ]; then
   echo -e "${YELLOW}⚠️  IMPORTANT - Enterprise Edition Setup${NC}"
   echo ""
-  echo "Your Dockerfile has been configured for Enterprise Edition."
-  echo "Before running docker-compose, you MUST update the Dockerfile:"
+  echo "Your Dockerfile has been configured for Enterprise Edition development."
   echo ""
-  echo "  1️⃣  Edit Dockerfile (currently uses Community as fallback)"
+  echo "📝 NEXT STEP: Update the Docker base image"
   echo ""
-  echo "  2️⃣  Choose ONE option:"
-  echo "      Option A: GitHub Enterprise Nightly (requires auth)"
-  echo "        FROM ghcr.io/odoo/odoo:18.0-enterprise"
-  echo "        docker login ghcr.io -u <username> -p <github-token>"
+  echo "Edit your Dockerfile and uncomment/choose ONE of these options:"
   echo ""
-  echo "      Option B: Odoo Enterprise from source"
-  echo "        git clone --branch 18.0 https://github.com/odoo/odoo.git"
-  echo "        Build from Odoo's Dockerfile"
+  echo "  1️⃣  GitHub Enterprise Nightly (recommended)"
+  echo "      FROM ghcr.io/odoo/odoo:18.0-enterprise"
   echo ""
-  echo "  3️⃣  Replace the 'FROM odoo:18.0' line in Dockerfile"
+  echo "      First authenticate:"
+  echo "      docker login ghcr.io -u <github-username> -p <github-token>"
   echo ""
-  echo "  See Dockerfile for detailed comments with all options"
+  echo "  2️⃣  Community Edition (for development/testing only)"
+  echo "      FROM odoo:18.0"
+  echo "      ✅ Already set as default"
+  echo ""
+  echo "  3️⃣  Build from Odoo Enterprise source"
+  echo "      Clone Odoo repo and build from their Dockerfile"
+  echo ""
+  echo "💡 See Dockerfile comments for all options and details"
+  echo ""
+else
+  echo -e "${GREEN}✅ Community Edition configured${NC}"
+  echo "Your Dockerfile is ready to use: FROM odoo:18.0"
   echo ""
 fi
 

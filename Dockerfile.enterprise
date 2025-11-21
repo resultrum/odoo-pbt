@@ -1,7 +1,19 @@
-# Dockerfile for Development
-# Uses Community edition base (Enterprise sources are mounted as volumes)
+# Dockerfile for Enterprise Edition Development
+# Base Image: Odoo Enterprise from GHCR or custom build
 # For production builds, use Dockerfile.prod
 
+# TODO: Choose ONE of the following base images:
+# Option 1: GitHub Enterprise Nightly (requires authentication)
+#   FROM ghcr.io/odoo/odoo:18.0-enterprise
+#   Before building, run: docker login ghcr.io -u <username> -p <github-token>
+#
+# Option 2: Community Edition as fallback (for development only)
+#   FROM odoo:18.0
+#
+# Option 3: Build from Odoo Enterprise source
+#   Clone Odoo repository and build from their Dockerfile
+
+# CURRENT: Using Community as fallback - CHANGE THIS for Production
 FROM odoo:18.0
 
 USER root
@@ -11,11 +23,19 @@ RUN apt-get update && apt-get install -y \
     git \
     && pip3 install --break-system-packages git-aggregator \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/python3 /usr/bin/python
+
+# Create PyCharm helpers directory
+RUN mkdir -p /opt/.pycharm_helpers
 
 # Copy custom entrypoint script
 COPY entrypoint.sh /entrypoint-custom.sh
 RUN chmod +x /entrypoint-custom.sh
+
+# Copy fixed packaging_tool.py for PyCharm compatibility
+COPY packaging_tool.py /opt/.pycharm_helpers/packaging_tool.py
+RUN chmod +x /opt/.pycharm_helpers/packaging_tool.py
 
 ENTRYPOINT ["/entrypoint-custom.sh"]
 CMD ["odoo"]

@@ -2,52 +2,28 @@
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 #
 # Features:
-# - SSH agent socket forwarding (for private repo cloning)
-# - Source code volumes (for debugging with breakpoints)
-# - Hot-reload on code changes
-# - PyCharm debugger support
+# - Custom module development with hot-reload
+# - PyCharm debugging support (see docs/DEBUGGING_SIMPLE.md)
+# - Git-aggregator for OCA modules (optional)
+#
+# NOTE: Odoo Enterprise clone (odoo-enterprise/) is OPTIONAL
+# - Only needed if debugging Odoo core code
+# - Not required for debugging custom modules
+# - See docs/DEBUGGING_SIMPLE.md for details
 
 services:
   web:
-    # SSH Agent Socket - Required for SSH-based repo cloning
-    # Ensure SSH key is added: ssh-add ~/.ssh/id_rsa
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        # Forward SSH agent to builder (allows private repo clones)
-        SSH_AUTH_SOCK: ${SSH_AUTH_SOCK}
-
     volumes:
-      # ========== ODOO SOURCE CODE (for debugging) ==========
-      # Mount entire Odoo directory for full debugging support
-      # Allows setting breakpoints anywhere in Odoo core code
-      - ./odoo-enterprise:/opt/odoo:rw
-
-      # ========== CUSTOM MODULES ==========
+      # Custom modules (read-write for development)
       - ./addons/custom:/mnt/extra-addons/custom:rw
       - ./addons/oca:/mnt/extra-addons/oca:rw
       - ./addons/oca-addons:/mnt/extra-addons/oca-addons:rw
       - ./repos.yml:/mnt/repos.yml:ro
 
-      # ========== SSH KEYS (for pulling private repos) ==========
+      # SSH keys for cloning private repos
       - ~/.ssh:/root/.ssh:ro
 
-      # ========== PyCharm DEBUGGING (optional) ==========
-      # Uncomment below to enable PyCharm Python debugger
-      # - ./.pycharm_helpers:/opt/pycharm_helpers:ro
-
     environment:
-      # ========== GIT-AGGREGATOR ==========
       - ENABLE_GIT_AGGREGATE=false  # DEV: Load modules from local volumes
       # Uncomment to enable git-aggregator for pulling OCA modules
       # - ENABLE_GIT_AGGREGATE=true
-
-      # ========== PYCHARM DEBUGGER ==========
-      # Enable PyCharm remote debugging (see docs/PYCHARM_DEBUGGING.md)
-      - PYCHARM_DEBUG=${PYCHARM_DEBUG:-0}
-      - PYCHARM_DEBUG_PORT=${PYCHARM_DEBUG_PORT:-6100}
-
-    # SSH Agent Socket forwarding (required for SSH cloning)
-    stdin_open: true
-    tty: true
