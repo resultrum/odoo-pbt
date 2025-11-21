@@ -196,6 +196,23 @@ if [ -d "infrastructure" ]; then
   echo -e "   ${GREEN}✅ Updated infrastructure${NC}"
 fi
 
+# Step 6d: Generate project README from template
+echo -e "${YELLOW}6️⃣d Generating project README...${NC}"
+if [ -f "README-PROJECT-TEMPLATE.md" ]; then
+  EDITION_UPPER=$(echo "$EDITION" | tr '[:lower:]' '[:upper:]')
+  DATE_CREATION=$(date +%d\ %B\ %Y)
+
+  sed -e "s|{{PROJECT_NAME}}|$PROJECT_NAME|g" \
+      -e "s|{{MODULE_NAME}}|$MODULE_NAME|g" \
+      -e "s|{{ORG_NAME}}|$ORG_NAME|g" \
+      -e "s|{{EDITION_UPPER}}|$EDITION_UPPER|g" \
+      -e "s|{{EDITION}}|$EDITION|g" \
+      -e "s|\[DATE_CREATION\]|$DATE_CREATION|g" \
+      README-PROJECT-TEMPLATE.md > README.md
+
+  echo -e "   ${GREEN}✅ Generated README.md from template${NC}"
+fi
+
 # Step 7: Reset VERSION
 echo -e "${YELLOW}7️⃣ Resetting VERSION...${NC}"
 if [ -f "VERSION" ]; then
