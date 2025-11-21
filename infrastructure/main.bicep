@@ -1,6 +1,6 @@
-// Main infrastructure template for odoo-mta deployment on Azure
+// Main infrastructure template for odoo-pbt deployment on Azure
 // Enables disaster recovery deployment in <30 minutes
-// Usage: az deployment group create --resource-group rg-odoo-mta --template-file main.bicep --parameters parameters.json
+// Usage: az deployment group create --resource-group rg-odoo-pbt --template-file main.bicep --parameters parameters.json
 
 @minLength(3)
 @maxLength(11)
@@ -36,7 +36,7 @@ param odooPassword string
 @description('Tags for resource organization')
 param tags object = {
   environment: environment
-  project: 'odoo-mta'
+  project: 'odoo-pbt'
   managedBy: 'bicep'
   createdDate: utcNow('yyyy-MM-dd')
 }
@@ -355,8 +355,8 @@ systemctl start docker
 usermod -aG docker ${adminUsername}
 
 # Create directories
-mkdir -p /opt/odoo-mta/${environment}
-mkdir -p /backups/odoo-mta/${environment}
+mkdir -p /opt/odoo-pbt/${environment}
+mkdir -p /backups/odoo-pbt/${environment}
 
 # Mount data disk
 if [ -b /dev/sdc ]; then

@@ -2,8 +2,8 @@
 # Backup script for Odoo database and filestore
 # Usage: ./scripts/backup.sh [environment] [backup_path]
 # Examples:
-#   ./scripts/backup.sh test /backups/odoo-mta/test/
-#   ./scripts/backup.sh prod /backups/odoo-mta/prod/
+#   ./scripts/backup.sh test /backups/odoo-pbt/test/
+#   ./scripts/backup.sh prod /backups/odoo-pbt/prod/
 
 set -e  # Exit on error
 
@@ -12,13 +12,13 @@ set -e  # Exit on error
 # ============================================================================
 
 ENVIRONMENT=${1:-test}
-BACKUP_PATH=${2:-/backups/odoo-mta/${ENVIRONMENT}/}
+BACKUP_PATH=${2:-/backups/odoo-pbt/${ENVIRONMENT}/}
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
 BACKUP_DIR="${BACKUP_PATH}${TIMESTAMP}"
 
 # Container names (adjust if different)
-CONTAINER_NAME="odoo-mta-web"
-DB_CONTAINER_NAME="odoo-mta-db"
+CONTAINER_NAME="odoo-pbt-web"
+DB_CONTAINER_NAME="odoo-pbt-db"
 DB_NAME="mta-${ENVIRONMENT}"
 DB_USER="odoo"
 DB_PASSWORD="${DB_PASSWORD:-odoo}"

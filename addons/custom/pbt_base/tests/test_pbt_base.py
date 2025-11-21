@@ -6,7 +6,7 @@ from odoo.tests.common import TransactionCase
 
 
 class TestMtaBaseModule(TransactionCase):
-    """Test mta_base module installation and basic functionality."""
+    """Test pbt_base module installation and basic functionality."""
 
     @classmethod
     def setUpClass(cls):
@@ -14,17 +14,17 @@ class TestMtaBaseModule(TransactionCase):
         super().setUpClass()
 
     def test_module_installed(self):
-        """Test that mta_base module is installed."""
+        """Test that pbt_base module is installed."""
         module = self.env["ir.module.module"].search(
             [
-                ("name", "=", "mta_base"),
+                ("name", "=", "pbt_base"),
                 ("state", "=", "installed"),
             ]
         )
-        self.assertTrue(module, "mta_base module should be installed")
+        self.assertTrue(module, "pbt_base module should be installed")
 
     def test_dependencies_installed(self):
-        """Test that mta_base dependencies are installed."""
+        """Test that pbt_base dependencies are installed."""
         dependencies = ["helpdesk_mgmt", "project", "base"]
         for dep in dependencies:
             module = self.env["ir.module.module"].search(
@@ -39,7 +39,7 @@ class TestMtaBaseModule(TransactionCase):
         """Test module metadata is correct."""
         module = self.env["ir.module.module"].search(
             [
-                ("name", "=", "mta_base"),
+                ("name", "=", "pbt_base"),
             ]
         )
         self.assertEqual(
