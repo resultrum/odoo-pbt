@@ -20,19 +20,60 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
       - name: Install Docker Compose
-        run: |
-          curl -L https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-Linux-x86_64 -o /tmp/docker-compose
-          chmod +x /tmp/docker-compose
+        run: pip install docker-compose
+
+      - name: Load environment variables
+        run: cp .env.example .env
 
       - name: Validate docker-compose.yml
-        run: /tmp/docker-compose config -f docker-compose.yml > /dev/null
+        run: docker-compose config -f docker-compose.yml > /dev/null
+        env:
+          PROJECT_NAME: odoo-template
+          DB_HOST: db
+          DB_PORT: 5432
+          DB_NAME: odoo
+          DB_USER: odoo
+          DB_PASSWORD: odoo
+          POSTGRES_PASSWORD: odoo
+          ODOO_ADMIN_PASSWORD: admin
+          ODOO_PORT: 8069
+          ODOO_LONGPOLLING_PORT: 8072
 
       - name: Validate docker-compose.dev.yml
-        run: /tmp/docker-compose -f docker-compose.yml -f docker-compose.dev.yml config > /dev/null
+        run: docker-compose -f docker-compose.yml -f docker-compose.dev.yml config > /dev/null
+        env:
+          PROJECT_NAME: odoo-template
+          DB_HOST: db
+          DB_PORT: 5432
+          DB_NAME: odoo
+          DB_USER: odoo
+          DB_PASSWORD: odoo
+          POSTGRES_PASSWORD: odoo
+          ODOO_ADMIN_PASSWORD: admin
+          ODOO_PORT: 8069
+          ODOO_LONGPOLLING_PORT: 8072
 
       - name: Validate docker-compose.prod.yml
-        run: /tmp/docker-compose -f docker-compose.yml -f docker-compose.prod.yml config > /dev/null
+        run: docker-compose -f docker-compose.yml -f docker-compose.prod.yml config > /dev/null
+        env:
+          PROJECT_NAME: odoo-template
+          DB_HOST: db
+          DB_PORT: 5432
+          DB_NAME: odoo
+          DB_USER: odoo
+          DB_PASSWORD: odoo
+          POSTGRES_PASSWORD: odoo
+          ODOO_ADMIN_PASSWORD: admin
+          ODOO_PORT: 8069
+          ODOO_LONGPOLLING_PORT: 8072
+          DOCKER_REGISTRY: ghcr.io
+          DOCKER_ORG: resultrum
 
   validate-dockerfile:
     runs-on: ubuntu-latest
@@ -95,20 +136,42 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install shellcheck
-        run: apt-get update && apt-get install -y shellcheck
-
-      - name: Validate setup-new-project.sh
-        run: shellcheck scripts/setup-new-project.sh || echo "⚠️ Some style issues (non-critical)"
-
-      - name: Validate pycharm-setup.sh
-        run: shellcheck scripts/pycharm-setup.sh || echo "⚠️ Some style issues (non-critical)"
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
 
       - name: Check script permissions
         run: |
+          echo "Checking script permissions..."
           for script in scripts/*.sh; do
-            if [ -f "$script" ] && [ ! -x "$script" ]; then
-              echo "⚠️ Script not executable: $script"
-              chmod +x "$script"
+            if [ -f "$script" ]; then
+              if [ -x "$script" ]; then
+                echo "✅ $script is executable"
+              else
+                echo "⚠️ $script is not executable"
+              fi
+            fi
+          done
+
+      - name: Validate setup-new-project.sh
+        continue-on-error: true
+        run: |
+          if [ -f "scripts/setup-new-project.sh" ]; then
+            shellcheck scripts/setup-new-project.sh || echo "⚠️ Some style issues (non-critical)"
+          fi
+
+      - name: Validate pycharm-setup.sh
+        continue-on-error: true
+        run: |
+          if [ -f "scripts/pycharm-setup.sh" ]; then
+            shellcheck scripts/pycharm-setup.sh || echo "⚠️ Some style issues (non-critical)"
+          fi
+
+      - name: Validate other shell scripts
+        continue-on-error: true
+        run: |
+          for script in scripts/*.sh; do
+            if [ -f "$script" ] && [ "$script" != "scripts/setup-new-project.sh" ] && [ "$script" != "scripts/pycharm-setup.sh" ]; then
+              echo "Checking $script..."
+              shellcheck "$script" || echo "⚠️ Some issues in $(basename $script) (non-critical)"
             fi
           done
 
