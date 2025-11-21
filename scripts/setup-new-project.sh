@@ -45,7 +45,7 @@ if [[ ! "$MODULE_NAME" =~ ^[a-z0-9_]+$ ]]; then
   exit 1
 fi
 
-if [ ! -f "Dockerfile" ] || [ ! -d "addons/custom/mta_base" ]; then
+if [ ! -f "Dockerfile" ] || [ ! -d "addons/custom" ]; then
   echo -e "${RED}❌ This script must be run from the root of the template repository${NC}"
   exit 1
 fi
@@ -177,8 +177,8 @@ echo -e "${YELLOW}6️⃣b Updating scripts...${NC}"
 if [ -d "scripts" ]; then
   for file in scripts/*.sh; do
     if [ -f "$file" ]; then
-      sed -i '' "s|odoo-pbt|$PROJECT_NAME|g" "$file"
-      sed -i '' "s|odoo_pbt|$PROJECT_NAME_UNDERSCORE|g" "$file"
+      sed -i '' "s|odoo-mta|$PROJECT_NAME|g" "$file"
+      sed -i '' "s|odoo_mta|$PROJECT_NAME_UNDERSCORE|g" "$file"
     fi
   done
   echo -e "   ${GREEN}✅ Updated scripts${NC}"
@@ -189,8 +189,8 @@ echo -e "${YELLOW}6️⃣c Updating infrastructure templates...${NC}"
 if [ -d "infrastructure" ]; then
   for file in infrastructure/*.bicep infrastructure/*.json; do
     if [ -f "$file" ]; then
-      sed -i '' "s|odoo-pbt|$PROJECT_NAME|g" "$file"
-      sed -i '' "s|odoo_pbt|$PROJECT_NAME_UNDERSCORE|g" "$file"
+      sed -i '' "s|odoo-mta|$PROJECT_NAME|g" "$file"
+      sed -i '' "s|odoo_mta|$PROJECT_NAME_UNDERSCORE|g" "$file"
     fi
   done
   echo -e "   ${GREEN}✅ Updated infrastructure${NC}"
