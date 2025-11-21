@@ -1,24 +1,19 @@
 # Dockerfile for Enterprise Edition Development
-# Base Image: Odoo Enterprise built weekly from resultrum/enterprise
-# This image is automatically built and pushed to GHCR by GitHub Actions
+# Uses pre-built image from resultrum/enterprise
 #
-# Image tags (all pointing to the same weekly build):
-#   ghcr.io/resultrum/odoo:18.0-enterprise-latest (always the latest weekly build)
-#   ghcr.io/resultrum/odoo:18.0-enterprise-week-47 (specific week)
-#   ghcr.io/resultrum/odoo:18.0-enterprise-2025-W47 (year-week format)
+# The Enterprise image is built weekly by:
+#   resultrum/enterprise/.github/workflows/build-image.yml
 #
-# Workflow: odoo-template/.github/workflows/build-enterprise-image.yml
-#   - Runs: Every Monday at 00:00 UTC
-#   - Source: Clone resultrum/enterprise
-#   - Build: Docker image from source
-#   - Push: To GHCR with multiple tags
+# Image published to:
+#   ghcr.io/resultrum/odoo:18.0-enterprise-latest
+#   ghcr.io/resultrum/odoo:18.0-enterprise-week-47
+#   ghcr.io/resultrum/odoo:18.0-enterprise-2025-W47
+#
+# Contains: Odoo 18.0 + all Enterprise addons
 #
 # Local usage:
-#   # First-time setup: authenticate to GHCR
-#   docker login ghcr.io -u <github-username> -p <github-token>
-#
-#   # Run with Enterprise edition
-#   docker-compose -f docker-compose.yml -f docker-compose.enterprise.yml up -d
+#   1. docker login ghcr.io -u <username> -p <token>
+#   2. docker-compose -f docker-compose.yml -f docker-compose.enterprise.yml up -d
 
 FROM ghcr.io/resultrum/odoo:18.0-enterprise-latest
 
