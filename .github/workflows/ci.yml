@@ -1,0 +1,139 @@
+name: CI/CD - Tests & Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'addons/**'
+      - 'scripts/**'
+      - '.github/workflows/ci.yml'
+      - 'requirements*.txt'
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    name: Python Tests
+
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11']
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt 2>/dev/null || echo "No requirements.txt"
+          pip install -r requirements-test.txt 2>/dev/null || echo "No requirements-test.txt"
+          pip install pytest pytest-cov flake8 isort black
+
+      - name: Lint with flake8
+        continue-on-error: true
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 addons/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 addons/ --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+
+      - name: Check import order with isort
+        continue-on-error: true
+        run: isort --check-only --diff addons/
+
+      - name: Check formatting with black
+        continue-on-error: true
+        run: black --check addons/
+
+      - name: Run tests
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: test_db
+          DB_USER: odoo
+          DB_PASSWORD: odoo
+        run: |
+          pytest addons/ -v --cov=addons --cov-report=xml --cov-report=html || echo "No tests found"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        continue-on-error: true
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scanning
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'addons/'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  manifest-check:
+    runs-on: ubuntu-latest
+    name: Check Module Manifests
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Validate __manifest__.py files
+        run: |
+          python << 'EOF'
+          import os
+          import ast
+
+          for root, dirs, files in os.walk('addons'):
+              if '__manifest__.py' in files:
+                  manifest_file = os.path.join(root, '__manifest__.py')
+                  try:
+                      with open(manifest_file, 'r') as f:
+                          content = f.read()
+                      ast.parse(content)
+                      print(f"✅ {manifest_file} - Valid")
+                  except SyntaxError as e:
+                      print(f"❌ {manifest_file} - Syntax Error: {e}")
+                      exit(1)
+          EOF

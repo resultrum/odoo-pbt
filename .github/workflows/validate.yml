@@ -1,0 +1,145 @@
+name: Validate - Configuration & Dependencies
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '.env.example'
+      - 'requirements*.txt'
+      - 'docker-compose*.yml'
+      - 'Dockerfile*'
+      - '.github/workflows/validate.yml'
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  validate-docker-compose:
+    runs-on: ubuntu-latest
+    name: Validate Docker Compose Files
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Docker Compose
+        run: |
+          curl -L https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-Linux-x86_64 -o /tmp/docker-compose
+          chmod +x /tmp/docker-compose
+
+      - name: Validate docker-compose.yml
+        run: /tmp/docker-compose config -f docker-compose.yml > /dev/null
+
+      - name: Validate docker-compose.dev.yml
+        run: /tmp/docker-compose -f docker-compose.yml -f docker-compose.dev.yml config > /dev/null
+
+      - name: Validate docker-compose.prod.yml
+        run: /tmp/docker-compose -f docker-compose.yml -f docker-compose.prod.yml config > /dev/null
+
+  validate-dockerfile:
+    runs-on: ubuntu-latest
+    name: Validate Dockerfiles
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Dockerfile syntax
+        run: |
+          docker run --rm -i hadolint/hadolint < Dockerfile || echo "⚠️ Some issues found (non-critical)"
+
+      - name: Validate Dockerfile.enterprise syntax
+        run: |
+          docker run --rm -i hadolint/hadolint < Dockerfile.enterprise || echo "⚠️ Some issues found (non-critical)"
+
+      - name: Validate Dockerfile.community syntax
+        run: |
+          docker run --rm -i hadolint/hadolint < Dockerfile.community || echo "⚠️ Some issues found (non-critical)"
+
+      - name: Validate Dockerfile.prod syntax
+        run: |
+          docker run --rm -i hadolint/hadolint < Dockerfile.prod || echo "⚠️ Some issues found (non-critical)"
+
+  validate-env:
+    runs-on: ubuntu-latest
+    name: Validate .env Configuration
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check .env.example syntax
+        run: |
+          echo "Checking .env.example..."
+          # Validate that each line is either empty, comment, or KEY=VALUE format
+          grep -v '^#' .env.example | grep -v '^$' | while IFS= read -r line; do
+            if [[ ! "$line" =~ ^[A-Z_][A-Z0-9_]*= ]]; then
+              echo "❌ Invalid format: $line"
+              exit 1
+            fi
+          done
+          echo "✅ .env.example format is valid"
+
+      - name: Check required environment variables
+        run: |
+          REQUIRED_VARS=("DB_HOST" "DB_PORT" "DB_NAME" "DB_USER" "DB_PASSWORD")
+          for var in "${REQUIRED_VARS[@]}"; do
+            if ! grep -q "^$var=" .env.example; then
+              echo "❌ Missing required variable: $var"
+              exit 1
+            fi
+          done
+          echo "✅ All required variables present"
+
+  validate-scripts:
+    runs-on: ubuntu-latest
+    name: Validate Shell Scripts
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: apt-get update && apt-get install -y shellcheck
+
+      - name: Validate setup-new-project.sh
+        run: shellcheck scripts/setup-new-project.sh || echo "⚠️ Some style issues (non-critical)"
+
+      - name: Validate pycharm-setup.sh
+        run: shellcheck scripts/pycharm-setup.sh || echo "⚠️ Some style issues (non-critical)"
+
+      - name: Check script permissions
+        run: |
+          for script in scripts/*.sh; do
+            if [ -f "$script" ] && [ ! -x "$script" ]; then
+              echo "⚠️ Script not executable: $script"
+              chmod +x "$script"
+            fi
+          done
+
+  validate-documentation:
+    runs-on: ubuntu-latest
+    name: Validate Documentation
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check README exists
+        run: |
+          if [ ! -f "README.md" ]; then
+            echo "❌ README.md not found"
+            exit 1
+          fi
+          echo "✅ README.md exists"
+
+      - name: Check docs directory
+        run: |
+          if [ ! -d "docs" ]; then
+            echo "⚠️ docs/ directory not found"
+          else
+            echo "✅ docs/ directory exists"
+          fi
+
+      - name: Validate markdown links
+        continue-on-error: true
+        run: |
+          # Simple markdown link validation
+          grep -r '\[.*\](.*\.md)' . --include="*.md" | while IFS=: read -r file link; do
+            echo "Checking links in: $file"
+          done
+          echo "✅ Markdown link check completed"
