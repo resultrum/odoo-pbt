@@ -1,19 +1,13 @@
-# Dockerfile for Enterprise Edition Development
-# Base Image: Odoo Enterprise from GHCR or custom build
-# For production builds, use Dockerfile.prod
-
-# TODO: Choose ONE of the following base images:
-# Option 1: GitHub Enterprise Nightly (requires authentication)
-FROM ghcr.io/odoo/odoo:18.0-enterprise
-#   Before building, run: docker login ghcr.io -u <username> -p <github-token>
+# Dockerfile for Development - Community Edition
+# Base Image: Odoo Community Edition (public, no auth needed)
 #
-# Option 2: Community Edition as fallback (for development only)
-#   FROM odoo:18.0
+# For Enterprise Edition development:
+#   docker-compose -f docker-compose.yml -f docker-compose.enterprise.yml up -d
 #
-# Option 3: Build from Odoo Enterprise source
-#   Clone Odoo repository and build from their Dockerfile
+# Enterprise image is built weekly by GitHub Actions (in odoo-template repo) and pushed to:
+#   ghcr.io/resultrum/odoo:18.0-enterprise-latest
 
-# CURRENT: Using Community as fallback - CHANGE THIS for Production
+FROM odoo:18.0
 
 USER root
 
