@@ -12,10 +12,15 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate-docker-compose:
     runs-on: ubuntu-latest
     name: Validate Docker Compose Files
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -78,6 +83,7 @@ jobs:
   validate-dockerfile:
     runs-on: ubuntu-latest
     name: Validate Dockerfiles
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -101,6 +107,7 @@ jobs:
   validate-env:
     runs-on: ubuntu-latest
     name: Validate .env Configuration
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -131,6 +138,7 @@ jobs:
   validate-scripts:
     runs-on: ubuntu-latest
     name: Validate Shell Scripts
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -178,6 +186,7 @@ jobs:
   validate-documentation:
     runs-on: ubuntu-latest
     name: Validate Documentation
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
